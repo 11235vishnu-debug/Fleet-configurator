@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Switch EV – Fleet Intelligence Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #00701A 0%, #004f8c 55%, #0079F2 100%);
+    min-height: 100vh;
+    color: #1e293b;
+  }
+  .page { max-width: 1300px; margin: 0 auto; padding: 28px 20px 40px; }
+
+  /* ── Header ── */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-pill {
+    background: rgba(255,255,255,0.95);
+    border-radius: 14px;
+    padding: 7px 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo-pill svg { height: 28px; width: auto; }
+  .logo-text { font-weight: 800; font-size: 15px; color: #004f8c; letter-spacing: -0.5px; }
+  .logo-text span { color: #009118; }
+  .header-title h1 { font-size: 22px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .header-title p { font-size: 13px; color: rgba(255,255,255,0.72); margin-top: 2px; }
+  .btn-pdf {
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 7px;
+    backdrop-filter: blur(8px);
+    transition: background 0.2s;
+  }
+  .btn-pdf:hover { background: rgba(255,255,255,0.26); }
+
+  /* ── Glass Card ── */
+  .glass {
+    background: rgba(255,255,255,0.83);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 4px 20px rgba(0,60,30,0.10);
+  }
+
+  /* ── Config Panel ── */
+  .config { padding: 22px 24px 24px; margin-bottom: 20px; }
+  .config-title { font-size: 14px; font-weight: 700; color: #004f8c; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media(max-width:640px){ .config-grid { grid-template-columns: 1fr; } }
+  label.field-label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+  select.model-select {
+    width: 100%; padding: 11px 14px; border-radius: 12px;
+    border: 2px solid #0079F2; font-size: 14px; font-weight: 600;
+    color: #0079F2; background: #fff; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230079F2' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .model-hint { font-size: 12px; color: #64748b; margin-top: 6px; }
+  .model-hint span { font-weight: 600; color: #0079F2; }
+  .bus-controls { display: flex; align-items: center; gap: 10px; }
+  .btn-stepper {
+    width: 42px; height: 42px; border-radius: 12px;
+    border: 2px solid #0079F2; background: #fff;
+    color: #0079F2; font-size: 20px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .btn-stepper:hover { background: #e8f1ff; }
+  input.bus-input {
+    width: 80px; height: 42px; text-align: center;
+    font-size: 18px; font-weight: 700; color: #0079F2;
+    border: 2px solid #0079F2; border-radius: 12px;
+    outline: none; background: #fff;
+  }
+  input.bus-input::-webkit-inner-spin-button,
+  input.bus-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .bus-unit { font-size: 13px; color: #64748b; }
+  .quick-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn-quick {
+    padding: 5px 13px; border-radius: 8px; border: 2px solid #cbd5e1;
+    background: transparent; font-size: 12px; font-weight: 600;
+    color: #64748b; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-quick.active, .btn-quick:hover {
+    border-color: #0079F2; background: rgba(0,121,242,0.09); color: #0079F2;
+  }
+
+  /* ── Metric Cards Grid ── */
+  .cards-grid { display: grid; gap: 14px; margin-bottom: 20px; }
+  .cards-4 { grid-template-columns: repeat(4, 1fr); }
+  @media(max-width:900px){ .cards-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media(max-width:480px){ .cards-4 { grid-template-columns: 1fr; } }
+
+  .metric-card { padding: 20px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .card-label { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+  .card-value { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .card-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+  /* ── USP Banner ── */
+  .usp-banner {
+    background: rgba(255,255,255,0.13);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 16px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .usp-title { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+  .usp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media(max-width:800px){ .usp-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media(max-width:480px){ .usp-grid { grid-template-columns: 1fr; } }
+  .usp-item {
+    display: flex; gap: 12px;
+    background: rgba(255,255,255,0.10); border-radius: 12px; padding: 14px;
+  }
+  .usp-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .usp-item h4 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .usp-item p { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.4; }
+
+  /* ── Charts ── */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  @media(max-width:720px){ .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { padding: 20px 22px; }
+  .chart-card-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+  .chart-card-sub { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+
+  /* Bar Chart (CSS) */
+  .bar-chart { display: flex; align-items: flex-end; gap: 28px; height: 160px; padding: 0 20px; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; gap: 8px; }
+  .bar-fill { width: 70%; border-radius: 8px 8px 0 0; transition: height 0.4s ease; min-height: 4px; }
+  .bar-label { font-size: 12px; font-weight: 600; color: #475569; }
+  .bar-val { font-size: 13px; font-weight: 700; }
+
+  /* Donut Chart (SVG) */
+  .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-val { font-weight: 700; }
+
+  /* ── Summary Table ── */
+  .table-card { padding: 20px 22px 24px; margin-bottom: 20px; }
+  .table-card-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+  .table-card-sub { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { text-align: left; padding: 10px 14px; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+  .summary-table th:not(:first-child) { text-align: right; }
+  .summary-table td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; }
+  .summary-table td:not(:first-child) { text-align: right; }
+  .summary-table td:first-child { font-weight: 600; color: #334155; }
+  .summary-table td.per { color: #94a3b8; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: rgba(0,0,0,0.025); }
+
+  /* ── Footer ── */
+  .footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+  .footer p { font-size: 11px; color: rgba(255,255,255,0.55); }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff !important; }
+    .page { padding: 16px; }
+    .glass { box-shadow: none !important; border: 1px solid #e2e8f0 !important; background: #fff !important; }
+    .usp-banner { background: #f0fdf4 !important; border: 1px solid #d1fae5 !important; }
+    .usp-item { background: #f8fafc !important; }
+    .usp-item h4 { color: #004f8c !important; }
+    .usp-item p { color: #475569 !important; }
+    .usp-title { color: #004f8c !important; }
+    .header-title h1 { color: #004f8c !important; }
+    .header-title p { color: #64748b !important; }
+    .btn-pdf { display: none !important; }
+    .footer p { color: #94a3b8 !important; }
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-pill">
+        <!-- Switch EV Wordmark (inline SVG) -->
+        <svg viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
+          <rect width="120" height="34" rx="6" fill="none"/>
+          <!-- Lightning bolt icon -->
+          <path d="M8 4 L2 18 h7 L5 30 L18 14 h-8 L18 4z" fill="#009118" stroke="none"/>
+          <!-- SWITCH text -->
+          <text x="24" y="22" font-family="'Segoe UI',sans-serif" font-weight="800" font-size="14" fill="#004f8c">SWITCH</text>
+          <!-- EV text -->
+          <text x="84" y="22" font-family="'Segoe UI',sans-serif" font-weight="800" font-size="14" fill="#009118">EV</text>
+        </svg>
+      </div>
+      <div class="header-title">
+        <h1>Fleet Intelligence Dashboard</h1>
+        <p>Customer Fleet Analysis &amp; Cost Savings</p>
+      </div>
+    </div>
+    <button class="btn-pdf" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Export PDF
+    </button>
+  </div>
+
+  <!-- Config Panel -->
+  <div class="glass config">
+    <div class="config-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0079F2" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      Fleet Configuration
+    </div>
+    <div class="config-grid">
+      <div>
+        <label class="field-label" for="busModel">Bus Model</label>
+        <select class="model-select" id="busModel" onchange="recalc()">
+          <option value="city">City Bus – 35 Seats</option>
+          <option value="intercity">Intercity Bus – 45 Seats</option>
+        </select>
+        <div class="model-hint">Selected: <span id="modelHint">35 passenger seats</span></div>
+      </div>
+      <div>
+        <label class="field-label" for="numBuses">Number of Buses</label>
+        <div class="bus-controls">
+          <button class="btn-stepper" onclick="stepBus(-1)">−</button>
+          <input class="bus-input" type="number" id="numBuses" value="10" min="1" onchange="recalc()" oninput="recalc()"/>
+          <button class="btn-stepper" onclick="stepBus(1)">+</button>
+          <span class="bus-unit">buses</span>
+        </div>
+        <div class="quick-btns" id="quickBtns">
+          <button class="btn-quick" onclick="setQuick(5)">5</button>
+          <button class="btn-quick active" onclick="setQuick(10)">10</button>
+          <button class="btn-quick" onclick="setQuick(25)">25</button>
+          <button class="btn-quick" onclick="setQuick(50)">50</button>
+          <button class="btn-quick" onclick="setQuick(100)">100</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Row 1: Range & Capacity -->
+  <div class="cards-grid cards-4" style="margin-bottom:20px">
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#0079F218">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0079F2" stroke-width="2.2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </div>
+        <div class="card-badge" style="background:#0079F215;color:#0079F2;border:1px solid #0079F230">Per Bus</div>
+      </div>
+      <div class="card-label">Range Per Bus</div>
+      <div class="card-value" style="color:#0079F2">500 km</div>
+      <div class="card-sub">With opportunity charging</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#0079F218">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0079F2" stroke-width="2.2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </div>
+      </div>
+      <div class="card-label">Total Fleet Range</div>
+      <div class="card-value" style="color:#0079F2" id="kpi-totalRange">5,000 km</div>
+      <div class="card-sub" id="kpi-totalRangeSub">10 buses × 500 km</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#00911818">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#009118" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="card-badge" id="kpi-modelBadge" style="background:#00911815;color:#009118;border:1px solid #00911830">City – 35 Seats</div>
+      </div>
+      <div class="card-label">Passenger Capacity</div>
+      <div class="card-value" style="color:#009118" id="kpi-totalPax">350</div>
+      <div class="card-sub" id="kpi-totalPaxSub">35 seats × 10 buses</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#00911818">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#009118" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+      </div>
+      <div class="card-label">Annual Fleet Distance</div>
+      <div class="card-value" style="color:#009118" id="kpi-totalKm">18,25,000 km</div>
+      <div class="card-sub" id="kpi-totalKmSub">1,82,500 km/yr × 10 buses</div>
+    </div>
+  </div>
+
+  <!-- KPI Row 2: Cost -->
+  <div class="cards-grid cards-4" style="margin-bottom:20px">
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#0079F218">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0079F2" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+        </div>
+        <div class="card-badge" style="background:#0079F215;color:#0079F2;border:1px solid #0079F230">Ex-Showroom</div>
+      </div>
+      <div class="card-label">Fleet Acquisition Price</div>
+      <div class="card-value" style="color:#0079F2" id="kpi-fleetPrice">₹10.60 Cr</div>
+      <div class="card-sub" id="kpi-fleetPriceSub">₹1.06 Cr/bus · Ex-showroom</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#00911818">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#009118" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="card-badge" style="background:#00911815;color:#009118;border:1px solid #00911830">Electric</div>
+      </div>
+      <div class="card-label">EV Operational Cost/Year</div>
+      <div class="card-value" style="color:#009118" id="kpi-evCost">₹160.60 L</div>
+      <div class="card-sub">₹16.06 L/yr per bus</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#A6080818">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A60808" stroke-width="2.2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        </div>
+        <div class="card-badge" style="background:#A6080815;color:#A60808;border:1px solid #A6080830">Diesel</div>
+      </div>
+      <div class="card-label">Diesel Operational Cost/Year</div>
+      <div class="card-value" style="color:#A60808" id="kpi-dieselCost">₹328.50 L</div>
+      <div class="card-sub">₹32.85 L/yr per bus</div>
+    </div>
+    <div class="glass metric-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:#00911818">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#009118" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div class="card-badge" style="background:#00911815;color:#009118;border:1px solid #00911830">You Save</div>
+      </div>
+      <div class="card-label">Total Savings (EV vs Diesel)</div>
+      <div class="card-value" style="color:#009118" id="kpi-savings">₹167.90 L</div>
+      <div class="card-sub">₹16.79 L saved per bus/yr</div>
+    </div>
+  </div>
+
+  <!-- USP Banner -->
+  <div class="usp-banner">
+    <div class="usp-title">Why Switch EV?</div>
+    <div class="usp-grid">
+      <div class="usp-item">
+        <div class="usp-icon" style="background:rgba(74,222,128,0.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+        </div>
+        <div>
+          <h4>Lower Acquisition Cost</h4>
+          <p>Competitive ex-showroom price of ₹1.06 Cr — most affordable EV bus in class</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon" style="background:rgba(96,165,250,0.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div>
+          <h4>Faster Opportunity Charging</h4>
+          <p>Top-up charging during route stops — no downtime, keeps buses on the road</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon" style="background:rgba(74,222,128,0.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><path d="M12 22a10 10 0 0 1 0-20c4 0 7.4 2.4 9 6"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div>
+          <h4>Zero Tailpipe Emissions</h4>
+          <p>100% electric drivetrain — cleaner cities and a greener fleet reputation</p>
+        </div>
+      </div>
+      <div class="usp-item">
+        <div class="usp-icon" style="background:rgba(96,165,250,0.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+        </div>
+        <div>
+          <h4>Lower Running Costs</h4>
+          <p id="usp-savings-text">Save ₹16.79 L per bus every year compared to diesel operations</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="glass chart-card">
+      <div class="chart-card-title">Annual Fleet Cost Comparison</div>
+      <div class="chart-card-sub">EV vs Diesel — total fleet (₹ Lakhs/year)</div>
+      <div class="bar-chart" id="barChart">
+        <div class="bar-group">
+          <div class="bar-val" id="bar-ev-val" style="color:#009118">₹160.60 L</div>
+          <div class="bar-fill" id="bar-ev" style="background:#009118;height:49%"></div>
+          <div class="bar-label">EV Fleet</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val" id="bar-diesel-val" style="color:#A60808">₹328.50 L</div>
+          <div class="bar-fill" id="bar-diesel" style="background:#A60808;height:100%"></div>
+          <div class="bar-label">Diesel Fleet</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass chart-card">
+      <div class="chart-card-title">EV Cost vs Savings Breakdown</div>
+      <div class="chart-card-sub">What you pay vs what you save switching to EV</div>
+      <div class="donut-wrap">
+        <svg id="donutSvg" width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="52" fill="none" stroke="#e2e8f0" stroke-width="26"/>
+          <circle id="donut-ev" cx="75" cy="75" r="52" fill="none" stroke="#009118" stroke-width="26"
+            stroke-dasharray="326.73" stroke-dashoffset="0" stroke-linecap="butt"
+            transform="rotate(-90 75 75)"/>
+          <circle id="donut-save" cx="75" cy="75" r="52" fill="none" stroke="#0079F2" stroke-width="26"
+            stroke-dasharray="326.73" stroke-dashoffset="0" stroke-linecap="butt"
+            transform="rotate(-90 75 75)"/>
+        </svg>
+        <div class="donut-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#009118"></div>
+            <div>
+              <div style="font-size:11px;color:#64748b">EV Operational Cost</div>
+              <div class="legend-val" style="color:#009118" id="legend-ev">₹160.60 L</div>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#0079F2"></div>
+            <div>
+              <div style="font-size:11px;color:#64748b">Money Saved</div>
+              <div class="legend-val" style="color:#0079F2" id="legend-save">₹167.90 L</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Table -->
+  <div class="glass table-card">
+    <div class="table-card-title">Fleet Summary</div>
+    <div class="table-card-sub" id="tableSub">Complete breakdown for your 10 buses (City Bus – 35 Seats)</div>
+    <div style="overflow-x:auto">
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Per Bus</th>
+            <th id="th-fleet">Total Fleet (10 Buses)</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Switch EV · Fleet Analysis Dashboard · All costs in Indian Rupees (₹ Lakhs / Crores)</p>
+    <p>Range: 500 km with opportunity charging · Diesel: ₹32.85L/yr · EV: ₹16.06L/yr · Price: ₹1.06 Cr/bus</p>
+  </div>
+
+</div>
+
+<script>
+const RANGE = 500;
+const KM_YEAR = 182500;
+const EV_L = 16.06;
+const DIESEL_L = 32.85;
+const PRICE_CR = 1.06;
+const MODELS = {
+  city:      { label: 'City Bus – 35 Seats', seats: 35, badge: 'City – 35 Seats' },
+  intercity: { label: 'Intercity Bus – 45 Seats', seats: 45, badge: 'Intercity – 45 Seats' }
+};
+
+function fmt(n){ return new Intl.NumberFormat('en-IN').format(n); }
+function f2(n){ return n.toFixed(2); }
+
+function getVals(){
+  const model = document.getElementById('busModel').value;
+  const n = Math.max(1, parseInt(document.getElementById('numBuses').value)||1);
+  const m = MODELS[model];
+  return {
+    n, m,
+    totalRange: RANGE * n,
+    totalPax: m.seats * n,
+    totalKm: KM_YEAR * n,
+    evTotal: EV_L * n,
+    dieselTotal: DIESEL_L * n,
+    savings: (DIESEL_L - EV_L) * n,
+    fleetPrice: PRICE_CR * n,
+  };
+}
+
+function recalc(){
+  const v = getVals();
+  const {n,m} = v;
+
+  // Hint
+  document.getElementById('modelHint').textContent = m.seats + ' passenger seats';
+  document.getElementById('modelHint').style.color = m.label.includes('City') ? '#0079F2' : '#009118';
+
+  // Quick btns
+  document.querySelectorAll('.btn-quick').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.textContent)===n);
+  });
+
+  // KPI Row 1
+  document.getElementById('kpi-totalRange').textContent = fmt(v.totalRange)+' km';
+  document.getElementById('kpi-totalRangeSub').textContent = n+' bus'+(n>1?'es':'')+' × 500 km';
+  document.getElementById('kpi-modelBadge').textContent = m.badge;
+  document.getElementById('kpi-totalPax').textContent = fmt(v.totalPax);
+  document.getElementById('kpi-totalPaxSub').textContent = m.seats+' seats × '+n+' bus'+(n>1?'es':'');
+  document.getElementById('kpi-totalKm').textContent = fmt(v.totalKm)+' km';
+  document.getElementById('kpi-totalKmSub').textContent = fmt(KM_YEAR)+' km/yr × '+n+' bus'+(n>1?'es':'');
+
+  // KPI Row 2
+  document.getElementById('kpi-fleetPrice').textContent = '₹'+f2(v.fleetPrice)+' Cr';
+  document.getElementById('kpi-evCost').textContent = '₹'+f2(v.evTotal)+' L';
+  document.getElementById('kpi-dieselCost').textContent = '₹'+f2(v.dieselTotal)+' L';
+  document.getElementById('kpi-savings').textContent = '₹'+f2(v.savings)+' L';
+
+  // USP
+  document.getElementById('usp-savings-text').textContent =
+    'Save ₹'+f2(DIESEL_L - EV_L)+' L per bus every year compared to diesel operations';
+
+  // Bar chart
+  const ratio = v.evTotal / v.dieselTotal;
+  document.getElementById('bar-ev').style.height = (ratio * 100)+'%';
+  document.getElementById('bar-diesel').style.height = '100%';
+  document.getElementById('bar-ev-val').textContent = '₹'+f2(v.evTotal)+' L';
+  document.getElementById('bar-diesel-val').textContent = '₹'+f2(v.dieselTotal)+' L';
+
+  // Donut
+  const total = v.evTotal + v.savings;
+  const circ = 2 * Math.PI * 52; // 326.73
+  const evFrac = v.evTotal / total;
+  const saveFrac = v.savings / total;
+  const evDash = circ * evFrac;
+  const saveDash = circ * saveFrac;
+  const evEl = document.getElementById('donut-ev');
+  const saveEl = document.getElementById('donut-save');
+  evEl.setAttribute('stroke-dasharray', evDash+' '+(circ - evDash));
+  evEl.setAttribute('stroke-dashoffset', '0');
+  saveEl.setAttribute('stroke-dasharray', saveDash+' '+(circ - saveDash));
+  saveEl.setAttribute('stroke-dashoffset', -evDash+'');
+  document.getElementById('legend-ev').textContent = '₹'+f2(v.evTotal)+' L';
+  document.getElementById('legend-save').textContent = '₹'+f2(v.savings)+' L';
+
+  // Table
+  document.getElementById('tableSub').textContent =
+    'Complete breakdown for your '+n+' bus'+(n>1?'es':'')+' ('+m.label+')';
+  document.getElementById('th-fleet').textContent =
+    'Total Fleet ('+n+' '+(n===1?'Bus':'Buses')+')';
+  const rows = [
+    ['Bus Model',                     m.badge,                     n+'× '+m.label,            m.label.includes('City')?'#0079F2':'#009118'],
+    ['Acquisition Price (Ex-showroom)','₹'+PRICE_CR+' Cr',         '₹'+f2(v.fleetPrice)+' Cr','#0079F2'],
+    ['Range (opp. charging)',          '500 km',                    fmt(v.totalRange)+' km',   '#0079F2'],
+    ['Passenger Capacity',             m.seats+' seats',            fmt(v.totalPax)+' seats',  '#009118'],
+    ['Annual Distance',                fmt(KM_YEAR)+' km/yr',       fmt(v.totalKm)+' km/yr',   '#009118'],
+    ['EV Operational Cost/Year',       '₹'+EV_L+' L',               '₹'+f2(v.evTotal)+' L',   '#009118'],
+    ['Diesel Operational Cost/Year',   '₹'+DIESEL_L+' L',           '₹'+f2(v.dieselTotal)+' L','#A60808'],
+    ['Annual Savings (EV vs Diesel)',  '₹'+f2(DIESEL_L-EV_L)+' L', '₹'+f2(v.savings)+' L',   '#009118'],
+  ];
+  const tbody = document.getElementById('summaryBody');
+  tbody.innerHTML = rows.map(([label,per,total,color])=>`
+    <tr>
+      <td>${label}</td>
+      <td class="per">${per}</td>
+      <td style="font-weight:700;color:${color}">${total}</td>
+    </tr>`).join('');
+}
+
+function stepBus(delta){
+  const el = document.getElementById('numBuses');
+  el.value = Math.max(1, (parseInt(el.value)||1) + delta);
+  recalc();
+}
+
+function setQuick(n){
+  document.getElementById('numBuses').value = n;
+  recalc();
+}
+
+// Init
+recalc();
+</script>
+</body>
+</html>
